@@ -113,6 +113,8 @@ Static site
 
 短網址通常無法只靠字串知道店名與座標。Apps Script 可用 `UrlFetchApp` follow redirect 取得展開後 URL；這不是 Places API，不需要 Maps billing，但仍是一次網路請求。
 
+若短網址成功展開，後端會重新對展開後 URL 執行靜態解析，並優先使用展開後取得的店名候選與座標候選。
+
 ### 風險
 
 - Google Maps URL 格式可能改變。
@@ -142,6 +144,13 @@ Gemini 不負責憑空查資料。它只根據以下輸入推論：
 - 審核建議：`needs_review` 與原因。
 
 價格欄位 `price_level` 在 Gemini schema 中使用 `unknown`、`$`、`$$`、`$$$`、`$$$$`。寫入 Google Sheet 時，後端會把 `unknown` 正規化為空白，方便人工審核。
+
+後端寫入 Sheet 前會再清理模型輸出：
+
+- 文字欄位中的 `unknown`、`未知`、`不確定` 會轉成空白。
+- 陣列欄位中的 `unknown` 會被濾掉。
+- `latitude=0` 或 `longitude=0` 不會被視為有效座標。
+- 使用者手填欄位與 URL 靜態解析候選會作為 fallback。
 
 ## Google Sheet 欄位
 

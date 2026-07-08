@@ -10,8 +10,11 @@ function doPost(e) {
       return json_({ ok: true, ignored: true });
     }
 
-    const urlFacts = analyzeMapsUrl_(payload.mapsUrl);
+    const originalUrlFacts = analyzeMapsUrl_(payload.mapsUrl);
     const resolvedUrl = maybeResolveUrl_(payload.mapsUrl);
+    const urlFacts = resolvedUrl
+      ? mergeUrlFacts_(originalUrlFacts, analyzeMapsUrl_(resolvedUrl))
+      : originalUrlFacts;
     const profile = extractRestaurantProfile_(payload, urlFacts, resolvedUrl);
     const row = buildSheetRow_(payload, urlFacts, resolvedUrl, profile);
 
@@ -106,14 +109,28 @@ function maybeResolveUrl_(rawUrl) {
   }
 }
 
+function mergeUrlFacts_(originalFacts, resolvedFacts) {
+  return {
+    source_mode: "resolved_url",
+    original_url: originalFacts.original_url,
+    name_candidate: cleanText_(resolvedFacts.name_candidate) || cleanText_(originalFacts.name_candidate) || "",
+    coordinate_candidate: resolvedFacts.coordinate_candidate || originalFacts.coordinate_candidate || null,
+    path: resolvedFacts.path || originalFacts.path || "",
+    query: resolvedFacts.query || originalFacts.query || "",
+    parse_error: resolvedFacts.parse_error || originalFacts.parse_error || ""
+  };
+}
+
 function extractRestaurantProfile_(payload, urlFacts, resolvedUrl) {
   const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
   if (!apiKey) throw new Error("Missing GEMINI_API_KEY in Script Properties.");
 
   const prompt = [
     "你是餐廳推薦資料整理助手。只能根據輸入資料推論，不要假裝查到不存在的評論或即時資訊。",
-    "如果資訊不足，欄位可留空，並提高 needs_review。",
+    "如果資訊不足，文字欄位請用空字串，陣列欄位請用空陣列，不要輸出 unknown、未知、不確定。",
+    "latitude、longitude、rating 只有在輸入明確提供時才輸出；不要用 0 代表未知。",
     "請用繁體中文輸出。價格用 unknown, $, $$, $$$, $$$$。價格資訊不足時必須用 unknown。",
+    "若使用者手填店名、地區、價格，或 URL 靜態解析提供 name_candidate、coordinate_candidate，請優先保留這些線索。",
     "",
     "使用者投稿：",
     JSON.stringify(payload, null, 2),
@@ -199,6 +216,8 @@ function restaurantSchema_() {
 function buildSheetRow_(payload, urlFacts, resolvedUrl, profile) {
   const coordinates = urlFacts.coordinate_candidate || {};
   const id = Utilities.getUuid();
+  const latitude = normalizeCoordinate_(profile.latitude) || normalizeCoordinate_(coordinates.latitude);
+  const longitude = normalizeCoordinate_(profile.longitude) || normalizeCoordinate_(coordinates.longitude);
   return {
     id: id,
     created_at: new Date().toISOString(),
@@ -209,25 +228,25 @@ function buildSheetRow_(payload, urlFacts, resolvedUrl, profile) {
     submitter_name: payload.submitterName || "",
     user_note: payload.note || "",
     client_context: JSON.stringify(payload.clientContext || {}),
-    name: profile.name || payload.manualName || urlFacts.name_candidate || "",
-    district: profile.district || payload.manualDistrict || "",
-    address: profile.address || "",
-    latitude: profile.latitude || coordinates.latitude || "",
-    longitude: profile.longitude || coordinates.longitude || "",
-    rating: profile.rating || "",
+    name: cleanText_(profile.name) || cleanText_(payload.manualName) || cleanText_(urlFacts.name_candidate) || "",
+    district: cleanText_(profile.district) || cleanText_(payload.manualDistrict) || "",
+    address: cleanText_(profile.address) || "",
+    latitude: latitude || "",
+    longitude: longitude || "",
+    rating: normalizeRating_(profile.rating) || "",
     price_level: normalizePriceLevel_(profile.price_level) || payload.manualPrice || "",
-    cuisine_tags: join_(profile.cuisine_tags),
-    taste_tags: join_(profile.taste_tags),
-    vibe_tags: join_(profile.vibe_tags),
-    occasion_tags: join_(profile.occasion_tags),
-    parking: profile.parking || "",
-    features: join_(profile.features),
-    negative_signals: join_(profile.negative_signals),
-    confidence_name: profile.confidence_name,
-    confidence_location: profile.confidence_location,
-    confidence_tags: profile.confidence_tags,
+    cuisine_tags: join_(cleanArray_(profile.cuisine_tags)),
+    taste_tags: join_(cleanArray_(profile.taste_tags)),
+    vibe_tags: join_(cleanArray_(profile.vibe_tags)),
+    occasion_tags: join_(cleanArray_(profile.occasion_tags)),
+    parking: cleanText_(profile.parking) || "",
+    features: join_(cleanArray_(profile.features)),
+    negative_signals: join_(cleanArray_(profile.negative_signals)),
+    confidence_name: normalizeConfidence_(profile.confidence_name),
+    confidence_location: normalizeConfidence_(profile.confidence_location),
+    confidence_tags: normalizeConfidence_(profile.confidence_tags),
     needs_review: profile.needs_review,
-    review_notes: profile.review_notes || "",
+    review_notes: cleanText_(profile.review_notes) || "",
     ai_raw_json: JSON.stringify(profile)
   };
 }
@@ -282,6 +301,39 @@ function getHeaders_() {
 
 function join_(values) {
   return Array.isArray(values) ? values.join(", ") : "";
+}
+
+function cleanText_(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const lowered = text.toLowerCase();
+  if (["unknown", "n/a", "na", "null", "undefined", "未知", "不明", "不確定"].indexOf(lowered) !== -1) return "";
+  return text;
+}
+
+function cleanArray_(values) {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((value) => cleanText_(value))
+    .filter((value, index, array) => value && array.indexOf(value) === index);
+}
+
+function normalizeCoordinate_(value) {
+  const number = Number(value);
+  if (!isFinite(number) || number === 0) return "";
+  return number;
+}
+
+function normalizeRating_(value) {
+  const number = Number(value);
+  if (!isFinite(number) || number <= 0) return "";
+  return number;
+}
+
+function normalizeConfidence_(value) {
+  const number = Number(value);
+  if (!isFinite(number)) return "";
+  return Math.max(0, Math.min(1, number));
 }
 
 function normalizePriceLevel_(value) {

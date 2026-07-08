@@ -20,6 +20,8 @@ GitHub Pages static site / LIFF endpoint
 
 Gemini 的價格欄位使用 `unknown`、`$`、`$$`、`$$$`、`$$$$`，其中 `unknown` 會在寫入 Google Sheet 時轉成空白，避免 Gemini schema 使用空字串 enum 造成 400 錯誤。
 
+後端也會在寫入 Sheet 前清理模型保守輸出：`unknown`、`未知`、`不確定` 會轉成空白，陣列中的 `unknown` 會被濾掉，`0,0` 不會被當成有效座標。
+
 ## 專案結構
 
 ```text
