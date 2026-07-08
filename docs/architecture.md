@@ -141,6 +141,8 @@ Gemini 不負責憑空查資料。它只根據以下輸入推論：
 - 信心分數：名稱、地點、標籤、價格。
 - 審核建議：`needs_review` 與原因。
 
+價格欄位 `price_level` 在 Gemini schema 中使用 `unknown`、`$`、`$$`、`$$$`、`$$$$`。寫入 Google Sheet 時，後端會把 `unknown` 正規化為空白，方便人工審核。
+
 ## Google Sheet 欄位
 
 | 欄位 | 用途 |
@@ -209,4 +211,3 @@ Gemini 不負責憑空查資料。它只根據以下輸入推論：
 5. 建立 Apps Script 後端範本。
 6. 補 README 部署步驟。
 7. 本機以靜態伺服器驗證。
-

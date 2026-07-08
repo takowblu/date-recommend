@@ -113,7 +113,7 @@ function extractRestaurantProfile_(payload, urlFacts, resolvedUrl) {
   const prompt = [
     "你是餐廳推薦資料整理助手。只能根據輸入資料推論，不要假裝查到不存在的評論或即時資訊。",
     "如果資訊不足，欄位可留空，並提高 needs_review。",
-    "請用繁體中文輸出。價格用 $, $$, $$$, $$$$。",
+    "請用繁體中文輸出。價格用 unknown, $, $$, $$$, $$$$。價格資訊不足時必須用 unknown。",
     "",
     "使用者投稿：",
     JSON.stringify(payload, null, 2),
@@ -161,7 +161,7 @@ function restaurantSchema_() {
       latitude: { type: "number" },
       longitude: { type: "number" },
       rating: { type: "number" },
-      price_level: { type: "string", enum: ["", "$", "$$", "$$$", "$$$$"] },
+      price_level: { type: "string", enum: ["unknown", "$", "$$", "$$$", "$$$$"] },
       cuisine_tags: { type: "array", items: { type: "string" } },
       taste_tags: { type: "array", items: { type: "string" } },
       vibe_tags: { type: "array", items: { type: "string" } },
@@ -215,7 +215,7 @@ function buildSheetRow_(payload, urlFacts, resolvedUrl, profile) {
     latitude: profile.latitude || coordinates.latitude || "",
     longitude: profile.longitude || coordinates.longitude || "",
     rating: profile.rating || "",
-    price_level: profile.price_level || payload.manualPrice || "",
+    price_level: normalizePriceLevel_(profile.price_level) || payload.manualPrice || "",
     cuisine_tags: join_(profile.cuisine_tags),
     taste_tags: join_(profile.taste_tags),
     vibe_tags: join_(profile.vibe_tags),
@@ -282,6 +282,11 @@ function getHeaders_() {
 
 function join_(values) {
   return Array.isArray(values) ? values.join(", ") : "";
+}
+
+function normalizePriceLevel_(value) {
+  if (!value || value === "unknown") return "";
+  return value;
 }
 
 function json_(data, statusCode) {
