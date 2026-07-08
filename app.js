@@ -313,7 +313,9 @@ async function handleSubmit(event) {
     });
     const result = await response.json();
     if (!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
-    els.submitMessage.textContent = "已送出，等待人工審核。";
+    els.submitMessage.textContent = result.reviewStatus === "rejected"
+      ? "已收到，但系統判斷這可能不是餐飲地點。"
+      : "已送出，並通過餐飲地點初步檢查。";
     els.submitForm.reset();
   } catch (error) {
     els.submitMessage.textContent = `送出失敗：${error.message}`;

@@ -19,7 +19,7 @@ function doPost(e) {
     const row = buildSheetRow_(payload, urlFacts, resolvedUrl, profile);
 
     appendRow_(row);
-    return json_({ ok: true, id: row.id, needsReview: profile.needs_review });
+    return json_({ ok: true, id: row.id, reviewStatus: row.review_status, needsReview: row.needs_review });
   } catch (error) {
     return json_({ ok: false, error: error.message }, 400);
   }
@@ -131,6 +131,8 @@ function extractRestaurantProfile_(payload, urlFacts, resolvedUrl) {
     "latitude、longitude、rating 只有在輸入明確提供時才輸出；不要用 0 代表未知。",
     "請用繁體中文輸出。價格用 unknown, $, $$, $$$, $$$$。價格資訊不足時必須用 unknown。",
     "若使用者手填店名、地區、價格，或 URL 靜態解析提供 name_candidate、coordinate_candidate，請優先保留這些線索。",
+    "請根據 URL、店名候選與使用者筆記判斷是否為餐廳、咖啡廳、酒吧、甜點店、小吃攤、夜市攤位或其他餐飲地點。除非明顯不是餐飲地點，is_food_place 預設為 true。",
+    "店名、地區、地址、料理標籤、口味標籤、風格標籤、聚會類型標籤應以你的修正後結構化結果輸出；不要只複製使用者原文。",
     "",
     "使用者投稿：",
     JSON.stringify(payload, null, 2),
@@ -189,6 +191,8 @@ function restaurantSchema_() {
       confidence_name: { type: "number" },
       confidence_location: { type: "number" },
       confidence_tags: { type: "number" },
+      is_food_place: { type: "boolean" },
+      place_type: { type: "string" },
       needs_review: { type: "boolean" },
       review_notes: { type: "string" }
     },
@@ -207,6 +211,8 @@ function restaurantSchema_() {
       "confidence_name",
       "confidence_location",
       "confidence_tags",
+      "is_food_place",
+      "place_type",
       "needs_review",
       "review_notes"
     ]
@@ -218,10 +224,11 @@ function buildSheetRow_(payload, urlFacts, resolvedUrl, profile) {
   const id = Utilities.getUuid();
   const latitude = normalizeCoordinate_(profile.latitude) || normalizeCoordinate_(coordinates.latitude);
   const longitude = normalizeCoordinate_(profile.longitude) || normalizeCoordinate_(coordinates.longitude);
+  const isFoodPlace = profile.is_food_place !== false;
   return {
     id: id,
     created_at: new Date().toISOString(),
-    review_status: "pending",
+    review_status: isFoodPlace ? "approved" : "rejected",
     source_mode: resolvedUrl ? "resolved_url" : urlFacts.source_mode,
     original_url: payload.mapsUrl,
     resolved_url: resolvedUrl,
@@ -245,17 +252,38 @@ function buildSheetRow_(payload, urlFacts, resolvedUrl, profile) {
     confidence_name: normalizeConfidence_(profile.confidence_name),
     confidence_location: normalizeConfidence_(profile.confidence_location),
     confidence_tags: normalizeConfidence_(profile.confidence_tags),
-    needs_review: profile.needs_review,
-    review_notes: cleanText_(profile.review_notes) || "",
+    is_food_place: isFoodPlace,
+    place_type: cleanText_(profile.place_type) || "",
+    needs_review: profile.needs_review === true,
+    review_notes: buildReviewNotes_(profile, isFoodPlace),
     ai_raw_json: JSON.stringify(profile)
   };
 }
 
 function appendRow_(row) {
   const sheet = getSheet_();
-  const headers = getHeaders_();
-  if (sheet.getLastRow() === 0) sheet.appendRow(headers);
+  const headers = ensureHeaders_(sheet);
   sheet.appendRow(headers.map((header) => row[header] === undefined ? "" : row[header]));
+}
+
+function ensureHeaders_(sheet) {
+  const expectedHeaders = getHeaders_();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(expectedHeaders);
+    return expectedHeaders;
+  }
+
+  const lastColumn = Math.max(sheet.getLastColumn(), expectedHeaders.length);
+  const currentHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+    .map((value) => String(value || "").trim());
+  const activeHeaders = currentHeaders.filter((header) => header);
+  const missingHeaders = expectedHeaders.filter((header) => activeHeaders.indexOf(header) === -1);
+
+  if (missingHeaders.length > 0) {
+    sheet.getRange(1, activeHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+  }
+
+  return activeHeaders.concat(missingHeaders);
 }
 
 function getSheet_() {
@@ -293,6 +321,8 @@ function getHeaders_() {
     "confidence_name",
     "confidence_location",
     "confidence_tags",
+    "is_food_place",
+    "place_type",
     "needs_review",
     "review_notes",
     "ai_raw_json"
@@ -334,6 +364,16 @@ function normalizeConfidence_(value) {
   const number = Number(value);
   if (!isFinite(number)) return "";
   return Math.max(0, Math.min(1, number));
+}
+
+function buildReviewNotes_(profile, isFoodPlace) {
+  const notes = [];
+  const placeType = cleanText_(profile.place_type);
+  const reviewNotes = cleanText_(profile.review_notes);
+  if (placeType) notes.push("place_type=" + placeType);
+  if (!isFoodPlace) notes.push("Gemini 判斷此地點不是餐飲地點，已自動拒絕。");
+  if (reviewNotes) notes.push(reviewNotes);
+  return notes.join(" ");
 }
 
 function normalizePriceLevel_(value) {

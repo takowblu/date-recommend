@@ -140,8 +140,11 @@ Gemini 不負責憑空查資料。它只根據以下輸入推論：
 - 營運與便利：停車、價格、排隊、訂位線索。
 - 特色：招牌、環境、服務、氣氛。
 - 風險：低評分要素、可能踩雷點。
+- 地點判斷：是否為餐廳、咖啡廳、酒吧、甜點店、小吃攤、夜市攤位或其他餐飲地點。
 - 信心分數：名稱、地點、標籤、價格。
 - 審核建議：`needs_review` 與原因。
+
+投稿預設通過：只要 Gemini 沒有明確判斷地點不是餐飲地點，`review_status` 會寫入 `approved`。若明顯不是餐廳或餐飲地點，才寫入 `rejected`。`needs_review` 只代表資料仍值得補齊，不再阻止公開審核狀態。
 
 價格欄位 `price_level` 在 Gemini schema 中使用 `unknown`、`$`、`$$`、`$$$`、`$$$$`。寫入 Google Sheet 時，後端會把 `unknown` 正規化為空白，方便人工審核。
 
@@ -182,7 +185,9 @@ Gemini 不負責憑空查資料。它只根據以下輸入推論：
 | confidence_name | 店名信心 |
 | confidence_location | 地點信心 |
 | confidence_tags | 標籤信心 |
-| needs_review | 是否需人工審核 |
+| is_food_place | 是否為餐飲地點 |
+| place_type | Gemini 判斷的地點類型 |
+| needs_review | 是否仍需補齊資料 |
 | review_notes | 審核原因 |
 | ai_raw_json | Gemini 原始 JSON |
 

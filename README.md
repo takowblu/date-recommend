@@ -22,6 +22,8 @@ Gemini 的價格欄位使用 `unknown`、`$`、`$$`、`$$$`、`$$$$`，其中 `u
 
 後端也會在寫入 Sheet 前清理模型保守輸出：`unknown`、`未知`、`不確定` 會轉成空白，陣列中的 `unknown` 會被濾掉，`0,0` 不會被當成有效座標。
 
+投稿現在預設通過：Gemini 會判斷地點是否為餐廳、咖啡廳、酒吧、甜點店、小吃攤、夜市攤位或其他餐飲地點。除非明顯不是餐飲地點，`review_status` 會直接寫入 `approved`；非餐飲地點才寫入 `rejected`。
+
 ## 專案結構
 
 ```text
@@ -127,13 +129,13 @@ ENABLE_URL_RESOLVE=true
 
 ## Google Sheet 審核
 
-Apps Script 會寫入 `submissions` 工作表，預設 `review_status=pending`。
+Apps Script 會寫入 `submissions` 工作表，餐飲地點預設 `review_status=approved`，明顯非餐飲地點會寫成 `rejected`。
 
 建議流程：
 
-1. 人工檢查 `needs_review` 與 `review_notes`。
+1. 人工檢查 `needs_review` 與 `review_notes`，補齊資訊不足的欄位。
 2. 修正店名、地區、地址、標籤。
-3. 將可公開資料改成 `approved`。
+3. 若發現不是餐飲地點或資料不適合公開，再改成 `rejected`。
 4. 匯出或同步到 `data/restaurants.json`。
 
 ## GitHub Pages
