@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#16685a">
+    <title>餐廳推薦地圖</title>
+    <meta name="description" content="以地區與多標籤瀏覽朋友推薦的餐廳，也能貼上 Google Maps URL 投稿。">
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js"></script>
+    <script>
+      window.RESTAURANT_RECS_CONFIG = window.RESTAURANT_RECS_CONFIG || {
+        dataUrl: "data/restaurants.json",
+        submitEndpoint: "",
+        mapsEmbedApiKey: "",
+        liffId: "",
+        requireLiffLogin: false,
+        enableDemoSubmit: true
+      };
+    </script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Restaurant Map</p>
+          <h1>餐廳推薦地圖</h1>
+        </div>
+        <div class="topbar-actions">
+          <span id="liffStatus" class="status-pill secondary">Web 模式</span>
+          <span id="dataStatus" class="status-pill">載入資料中</span>
+          <button id="openSubmit" class="primary-button" type="button">推薦餐廳</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="filters-panel" aria-label="餐廳篩選">
+          <label class="field-label" for="searchInput">搜尋</label>
+          <input id="searchInput" class="text-input" type="search" placeholder="店名、地址、特色">
+
+          <div class="filter-group">
+            <div class="group-heading">地區</div>
+            <div id="districtFilters" class="segmented-list"></div>
+          </div>
+
+          <div class="filter-row">
+            <label class="field-label" for="priceSelect">價格</label>
+            <select id="priceSelect" class="select-input">
+              <option value="">全部</option>
+              <option value="$">$</option>
+              <option value="$$">$$</option>
+              <option value="$$$">$$$</option>
+              <option value="$$$$">$$$$</option>
+            </select>
+          </div>
+
+          <label class="checkline">
+            <input id="parkingToggle" type="checkbox">
+            <span>優先顯示有停車線索</span>
+          </label>
+
+          <div class="filter-group">
+            <div class="group-heading">標籤</div>
+            <div id="tagFilters" class="tag-filter-list"></div>
+          </div>
+        </aside>
+
+        <section class="results-panel" aria-label="餐廳清單">
+          <div class="results-header">
+            <div>
+              <p id="resultCount" class="result-count">0 間餐廳</p>
+              <h2 id="activeTitle">全部推薦</h2>
+            </div>
+            <button id="clearFilters" class="ghost-button" type="button">清除</button>
+          </div>
+          <div id="restaurantList" class="restaurant-list"></div>
+        </section>
+
+        <section class="map-panel" aria-label="餐廳地圖">
+          <div class="map-toolbar">
+            <div>
+              <p class="eyebrow">Map Preview</p>
+              <h2 id="selectedName">選擇餐廳</h2>
+            </div>
+            <a id="openInMaps" class="icon-link" href="#" target="_blank" rel="noreferrer">開啟地圖</a>
+          </div>
+          <div class="map-frame-wrap">
+            <iframe id="mapFrame" title="Google map" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            <div id="mapFallback" class="map-fallback">選一間餐廳查看位置</div>
+          </div>
+          <div id="detailPanel" class="detail-panel"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="submitDialog" class="submit-dialog">
+      <form id="submitForm" method="dialog">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">Submission</p>
+            <h2>推薦餐廳</h2>
+          </div>
+          <button id="closeSubmit" class="icon-button" type="button" aria-label="關閉">×</button>
+        </div>
+
+        <input id="websiteField" class="hidden-field" name="website" tabindex="-1" autocomplete="off">
+
+        <label class="field-label" for="mapsUrl">Google Maps URL</label>
+        <input id="mapsUrl" class="text-input" name="mapsUrl" type="url" placeholder="https://maps.app.goo.gl/..." required>
+
+        <label class="field-label" for="note">推薦理由</label>
+        <textarea id="note" class="textarea-input" name="note" rows="4" placeholder="你會推薦它給誰？哪道菜、哪種情境最適合？" required></textarea>
+
+        <div class="form-grid">
+          <div>
+            <label class="field-label" for="manualName">店名</label>
+            <input id="manualName" class="text-input" name="manualName" placeholder="選填，但很有幫助">
+          </div>
+          <div>
+            <label class="field-label" for="manualDistrict">地區</label>
+            <input id="manualDistrict" class="text-input" name="manualDistrict" placeholder="例如 大安">
+          </div>
+          <div>
+            <label class="field-label" for="manualPrice">價格</label>
+            <select id="manualPrice" class="select-input" name="manualPrice">
+              <option value="">不確定</option>
+              <option value="$">$</option>
+              <option value="$$">$$</option>
+              <option value="$$$">$$$</option>
+              <option value="$$$$">$$$$</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="submitterName">暱稱</label>
+            <input id="submitterName" class="text-input" name="submitterName" placeholder="選填">
+          </div>
+        </div>
+
+        <label class="field-label" for="occasionHint">適合情境</label>
+        <input id="occasionHint" class="text-input" name="occasionHint" placeholder="例如 約會、家庭、宵夜、商務午餐">
+
+        <div id="submitMessage" class="submit-message" role="status"></div>
+
+        <div class="dialog-actions">
+          <button class="ghost-button" type="button" id="cancelSubmit">取消</button>
+          <button class="primary-button" type="submit">送出審核</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

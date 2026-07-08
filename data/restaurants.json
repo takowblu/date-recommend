@@ -1,0 +1,83 @@
+[
+  {
+    "id": "demo-da-an-noodle-001",
+    "reviewStatus": "approved",
+    "sourceMode": "manual",
+    "name": "巷口清湯牛肉麵",
+    "district": "大安",
+    "address": "台北市大安區信義路三段",
+    "latitude": 25.0337,
+    "longitude": 121.5435,
+    "rating": 4.5,
+    "priceLevel": "$$",
+    "cuisineTags": ["牛肉麵", "台式"],
+    "tasteTags": ["清爽", "湯頭濃", "手工麵"],
+    "vibeTags": ["老店", "快速", "日常"],
+    "occasionTags": ["單人", "朋友聚餐", "午餐"],
+    "parking": "附近路邊停車較難，建議捷運或機車。",
+    "features": ["清燉湯頭", "小菜選擇多", "翻桌快"],
+    "negativeSignals": ["尖峰時段排隊", "座位距離較近"],
+    "confidence": {
+      "name": 0.92,
+      "location": 0.84,
+      "tags": 0.78
+    },
+    "needsReview": false,
+    "recommendationNote": "適合想吃舒服不厚重牛肉麵的午餐，湯頭乾淨，麵條口感好。",
+    "mapUrl": "https://www.google.com/maps/search/?api=1&query=25.0337,121.5435"
+  },
+  {
+    "id": "demo-zhongshan-bistro-002",
+    "reviewStatus": "approved",
+    "sourceMode": "manual",
+    "name": "光影小酒館",
+    "district": "中山",
+    "address": "台北市中山區南京東路一段",
+    "latitude": 25.0521,
+    "longitude": 121.5238,
+    "rating": 4.3,
+    "priceLevel": "$$$",
+    "cuisineTags": ["義式", "小酒館"],
+    "tasteTags": ["濃郁", "下酒", "香草"],
+    "vibeTags": ["約會", "昏黃燈光", "安靜"],
+    "occasionTags": ["約會", "朋友聚餐", "慶生"],
+    "parking": "附近有收費停車場，假日建議先查空位。",
+    "features": ["燉飯穩定", "酒單友善", "氣氛好"],
+    "negativeSignals": ["份量偏精緻", "價格較高"],
+    "confidence": {
+      "name": 0.88,
+      "location": 0.8,
+      "tags": 0.82
+    },
+    "needsReview": false,
+    "recommendationNote": "很適合兩三個人慢慢吃，餐點不花俏但氣氛舒服。",
+    "mapUrl": "https://www.google.com/maps/search/?api=1&query=25.0521,121.5238"
+  },
+  {
+    "id": "demo-xinyi-cafe-003",
+    "reviewStatus": "approved",
+    "sourceMode": "manual",
+    "name": "山丘早午餐",
+    "district": "信義",
+    "address": "台北市信義區松仁路",
+    "latitude": 25.036,
+    "longitude": 121.5686,
+    "rating": 4.1,
+    "priceLevel": "$$",
+    "cuisineTags": ["早午餐", "咖啡"],
+    "tasteTags": ["清爽", "甜點", "咖啡香"],
+    "vibeTags": ["明亮", "寬敞", "可聊天"],
+    "occasionTags": ["朋友聚餐", "家庭", "下午茶"],
+    "parking": "百貨停車場方便，但尖峰費用較高。",
+    "features": ["採光好", "甜點漂亮", "兒童友善"],
+    "negativeSignals": ["假日候位久", "部分座位較吵"],
+    "confidence": {
+      "name": 0.9,
+      "location": 0.86,
+      "tags": 0.8
+    },
+    "needsReview": false,
+    "recommendationNote": "聊天不趕人的早午餐選擇，甜點比主餐更有記憶點。",
+    "mapUrl": "https://www.google.com/maps/search/?api=1&query=25.036,121.5686"
+  }
+]
